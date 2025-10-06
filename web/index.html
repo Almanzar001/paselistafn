@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistencia Personal</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header .fecha {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .search-container {
+            background: white;
+            padding: 20px;
+            padding-top: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 88px;
+            left: 0;
+            right: 0;
+            z-index: 999;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #2196F3;
+        }
+
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            margin-top: 310px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .persona-card {
+            background: white;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .persona-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .persona-info {
+            flex: 1;
+        }
+
+        .persona-nombre {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .persona-detalles {
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .persona-hora {
+            color: #4CAF50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .btn-check {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-check:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .btn-undo {
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-undo:hover {
+            background: #f57c00;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            margin-bottom: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 178px;
+            left: 0;
+            right: 0;
+            z-index: 998;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border: none;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #2196F3;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 238px;
+            left: 0;
+            right: 0;
+            z-index: 997;
+        }
+
+        .stat-card {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .alert {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+            position: fixed;
+            top: 298px;
+            left: 20px;
+            right: 20px;
+            z-index: 1001;
+            max-width: 760px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .alert.error {
+            background: #F44336;
+        }
+
+        .alert.info {
+            background: #2196F3;
+        }
+
+        @media (max-width: 600px) {
+            .persona-card {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+
+            .persona-info {
+                margin-bottom: 15px;
+            }
+
+            .botones {
+                justify-content: center;
+            }
+
+            .content {
+                margin-top: 350px;
+                padding: 10px;
+            }
+
+            .search-container {
+                padding: 15px;
+                padding-top: 25px;
+                top: 88px;
+            }
+
+            .tabs {
+                top: 168px;
+            }
+
+            .stats {
+                top: 228px;
+                padding: 10px;
+            }
+
+            .alert {
+                top: 288px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Asistencia Personal</h1>
+        <div class="fecha" id="fecha"></div>
+    </div>
+
+    <div class="search-container">
+        <input 
+            type="text" 
+            class="search-input" 
+            id="searchInput"
+            placeholder="Buscar por nombre, rango o cédula..."
+        >
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="cambiarTab('pendientes')">
+            Por Pasar Lista (<span id="countPendientes">0</span>)
+        </button>
+        <button class="tab" onclick="cambiarTab('presentes')">
+            Presentes (<span id="countPresentes">0</span>)
+        </button>
+    </div>
+
+    <div class="content">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalPersonal">0</div>
+                <div class="stat-label">Total Personal</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalPresentes">0</div>
+                <div class="stat-label">Presentes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="porcentajeAsistencia">0%</div>
+                <div class="stat-label">% Asistencia</div>
+            </div>
+        </div>
+
+        <div class="alert" id="alert"></div>
+
+        <div class="loading" id="loading">
+            Cargando personal...
+        </div>
+
+        <!-- Tab: Personal pendiente por pasar lista -->
+        <div id="tab-pendientes" class="tab-content active">
+            <div id="personalPendienteContainer"></div>
+        </div>
+
+        <!-- Tab: Personal presente -->
+        <div id="tab-presentes" class="tab-content">
+            <div id="personalPresenteContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Supabase
+        const supabaseUrl = 'https://sssupabasess.coman2uniformes.com';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzE1MDUwODAwLAogICJleHAiOiAxODcyODE3MjAwCn0.vGcSPMihrp1q9HoEM-0f8LuoP-AmqurAPWxu_qpfThk';
+        
+        // Configurar Supabase con opciones adicionales
+        const supabaseOptions = {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        };
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, supabaseOptions);
+
+        let personal = [];
+        let asistencias = {};
+        let tabActual = 'pendientes';
+        const fechaHoy = new Date().toISOString().split('T')[0];
+
+        // Orden de instituciones
+        const ordenInstituciones = {
+            'ERD': 1,
+            'ARD': 2, 
+            'FARD': 3,
+            'PN': 4
+        };
+
+        // Orden de rangos (menor número = mayor jerarquía)
+        const ordenRangos = {
+            'MAYOR GENERAL': 1,
+            'GENERAL DE BRIGADA': 2,
+            'CORONEL': 3,
+            'CAPITÁN DE NAVIO': 4,
+            'TENIENTE CORONEL': 5,
+            'CAPITÁN DE FRAGATA': 6,
+            'MAYOR': 7,
+            'CAPITÁN DE CORBETA': 8,
+            'CAPITÁN': 9,
+            'TENIENTE DE NAVIO': 10,
+            '1ER. TENIENTE': 11,
+            'TTE. DE FRAGATA': 12,
+            '2DO.TENIENTE': 13,
+            'TTE. DE CORBETA': 14,
+            'SARGENTO MAYOR': 15,
+            'SARGENTO': 16,
+            'CABO': 17,
+            'RASO': 18,
+            'MARINERO': 19,
+            'ASIMILADO MILITAR': 20,
+            'ASIMILADO': 21,
+            'CIVIL': 22
+        };
+
+        // Inicializar app
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('fecha').textContent = new Date().toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            cargarDatos();
+            
+            // Debounce para la búsqueda
+            let timeoutBusqueda;
+            document.getElementById('searchInput').addEventListener('input', function() {
+                clearTimeout(timeoutBusqueda);
+                timeoutBusqueda = setTimeout(filtrarPersonal, 200);
+            });
+        });
+
+        async function cargarDatos() {
+            try {
+                console.log('Conectando a Supabase...');
+                // mostrarAlerta('Conectando a la base de datos...', 'info');
+                
+                // Prueba de conectividad básica
+                console.log('URL de Supabase:', supabaseUrl);
+                console.log('Cliente Supabase configurado:', !!supabase);
+                
+                // Cargar datos secuencialmente para asegurar orden correcto
+                await cargarPersonal();
+                await cargarAsistencias();
+                
+                // Verificar que los datos se cargaron correctamente
+                console.log('Personal cargado:', personal.length);
+                console.log('Asistencias cargadas:', Object.keys(asistencias).length);
+                
+                // Renderizar solo después de que ambos estén listos
+                actualizarEstadisticas();
+                renderizarTabs();
+                
+                console.log('Datos cargados exitosamente');
+                // mostrarAlerta('Datos cargados correctamente', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error al cargar los datos: ' + error.message, 'error');
+                document.getElementById('loading').innerHTML = 'Error de conexión. Revisa la consola del navegador.';
+            }
+        }
+
+        async function cargarPersonal() {
+            console.log('Cargando personal...');
+            const { data, error } = await supabase
+                .from('seguridad_dinamica')
+                .select('*');
+            
+            if (error) {
+                console.error('Error al cargar personal:', error);
+                throw error;
+            }
+            
+            // Ordenar personal según criterios
+            personal = (data || []).sort(compararPersonal);
+            console.log('Personal cargado y ordenado:', personal.length, 'personas');
+        }
+
+        function compararPersonal(a, b) {
+            // 1. Primero por institución
+            const instA = ordenInstituciones[a['INST.']] || 999;
+            const instB = ordenInstituciones[b['INST.']] || 999;
+            
+            if (instA !== instB) {
+                return instA - instB;
+            }
+            
+            // 2. Luego por rango
+            const rangoA = ordenRangos[a.RANGO?.toUpperCase()] || 999;
+            const rangoB = ordenRangos[b.RANGO?.toUpperCase()] || 999;
+            
+            if (rangoA !== rangoB) {
+                return rangoA - rangoB;
+            }
+            
+            // 3. Finalmente por apellidos
+            return (a.APELLIDOS || '').localeCompare(b.APELLIDOS || '');
+        }
+
+        async function cargarAsistencias() {
+            console.log('Cargando asistencias para fecha:', fechaHoy);
+            const { data, error } = await supabase
+                .from('asistencias')
+                .select('*')
+                .eq('fecha', fechaHoy);
+            
+            if (error) {
+                console.error('Error al cargar asistencias:', error);
+                throw error;
+            }
+            
+            // Reiniciar objeto de asistencias
+            asistencias = {};
+            
+            // Mapear asistencias por personal_id
+            data?.forEach(asistencia => {
+                asistencias[asistencia.personal_id] = asistencia;
+            });
+            
+            console.log('Asistencias cargadas:', Object.keys(asistencias).length, 'registros');
+        }
+
+        function cambiarTab(tab) {
+            tabActual = tab;
+            
+            // Actualizar botones de tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[onclick="cambiarTab('${tab}')"]`).classList.add('active');
+            
+            // Mostrar/ocultar contenido
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            renderizarTabs();
+        }
+
+        function filtrarPersonal() {
+            renderizarTabs();
+        }
+
+        function renderizarTabs() {
+            const busqueda = document.getElementById('searchInput').value.toLowerCase();
+            document.getElementById('loading').style.display = 'none';
+            
+            console.log('Renderizando tabs...');
+            console.log('Personal total:', personal.length);
+            console.log('Asistencias:', Object.keys(asistencias).length);
+            
+            // Filtrar personal
+            const personalFiltrado = personal.filter(persona =>
+                persona.APELLIDOS?.toLowerCase().includes(busqueda) ||
+                persona.NOMBRES?.toLowerCase().includes(busqueda) ||
+                persona.RANGO?.toLowerCase().includes(busqueda) ||
+                persona.CÉDULA?.includes(busqueda)
+            );
+            
+            // Separar en pendientes y presentes y ordenar
+            const pendientes = personalFiltrado
+                .filter(persona => !asistencias[persona.id]?.presente)
+                .sort(compararPersonal);
+                
+            const presentes = personalFiltrado
+                .filter(persona => asistencias[persona.id]?.presente)
+                .sort(compararPersonal);
+            
+            console.log('Pendientes:', pendientes.length);
+            console.log('Presentes:', presentes.length);
+            
+            // Actualizar contadores en tabs
+            document.getElementById('countPendientes').textContent = pendientes.length;
+            document.getElementById('countPresentes').textContent = presentes.length;
+            
+            // Renderizar cada tab
+            renderizarPersonalPendiente(pendientes);
+            renderizarPersonalPresente(presentes);
+        }
+
+        function renderizarPersonalPendiente(personalData) {
+            const container = document.getElementById('personalPendienteContainer');
+            
+            if (personalData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">✅ ¡Todos han pasado lista!</div>';
+                return;
+            }
+
+            container.innerHTML = personalData.map(persona => `
+                <div class="persona-card">
+                    <div class="persona-info">
+                        <div class="persona-nombre">
+                            ${persona.RANGO} ${persona.APELLIDOS}, ${persona.NOMBRES}
+                        </div>
+                        <div class="persona-detalles">
+                            ${persona['INST.'] || 'Sin institución'} • Cédula: ${persona.CÉDULA}
+                        </div>
+                    </div>
+                    <button 
+                        class="btn-check"
+                        onclick="marcarPresente(${persona.id})"
+                    >
+                        ✓ Presente
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderizarPersonalPresente(personalData) {
+            const container = document.getElementById('personalPresenteContainer');
+            
+            if (personalData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Aún no hay personal presente</div>';
+                return;
+            }
+
+            container.innerHTML = personalData.map(persona => {
+                const asistencia = asistencias[persona.id];
+                return `
+                    <div class="persona-card">
+                        <div class="persona-info">
+                            <div class="persona-nombre">
+                                ${persona.RANGO} ${persona.APELLIDOS}, ${persona.NOMBRES}
+                            </div>
+                            <div class="persona-detalles">
+                                ${persona['INST.'] || 'Sin institución'} • Cédula: ${persona.CÉDULA}
+                            </div>
+                            <div class="persona-hora">
+                                ✅ Entrada: ${asistencia.hora_entrada}
+                            </div>
+                        </div>
+                        <button 
+                            class="btn-undo"
+                            onclick="desmarcarPresente(${persona.id})"
+                            title="Quitar de presentes"
+                        >
+                            Deshacer
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function marcarPresente(personalId) {
+            const persona = personal.find(p => p.id === personalId);
+            if (!persona) return;
+            
+            const horaActual = new Date().toTimeString().split(' ')[0];
+            
+            // Encontrar y ocultar el elemento inmediatamente
+            const elemento = document.querySelector(`[onclick="marcarPresente(${personalId})"]`).closest('.persona-card');
+            elemento.style.transform = 'translateX(-100%)';
+            elemento.style.opacity = '0';
+            
+            // Actualizar datos locales
+            asistencias[personalId] = {
+                personal_id: personalId,
+                fecha: fechaHoy,
+                presente: true,
+                hora_entrada: horaActual,
+                id: asistencias[personalId]?.id
+            };
+            
+            // Actualizar contadores inmediatamente
+            actualizarContadoresRapido();
+            // mostrarAlerta(`✅ ${persona.APELLIDOS}, ${persona.NOMBRES} marcado presente`, 'success');
+            
+            // Remover elemento después de la animación
+            setTimeout(() => {
+                elemento.remove();
+                // Solo actualizar el tab de presentes
+                if (tabActual === 'presentes') {
+                    agregarAPresentes(persona, horaActual);
+                }
+            }, 300);
+            
+            // Guardar en background sin await para no bloquear
+            guardarAsistenciaBackground(personalId, true, horaActual);
+        }
+
+        async function desmarcarPresente(personalId) {
+            const persona = personal.find(p => p.id === personalId);
+            const asistencia = asistencias[personalId];
+            if (!asistencia) {
+                console.log('No hay asistencia para eliminar');
+                return;
+            }
+            
+            console.log('Desmarcando presente:', personalId, 'ID de asistencia:', asistencia.id);
+            
+            // Animar y remover elemento
+            const elemento = document.querySelector(`[onclick="desmarcarPresente(${personalId})"]`).closest('.persona-card');
+            elemento.style.transform = 'translateX(100%)';
+            elemento.style.opacity = '0';
+            
+            // Actualizar datos locales
+            delete asistencias[personalId];
+            
+            // Actualizar contadores
+            actualizarContadoresRapido();
+            // mostrarAlerta(`🔄 ${persona.APELLIDOS}, ${persona.NOMBRES} regresado a lista pendiente`, 'success');
+            
+            // Remover elemento después de la animación
+            setTimeout(() => {
+                elemento.remove();
+                // Solo actualizar el tab de pendientes si está activo
+                if (tabActual === 'pendientes') {
+                    agregarAPendientes(persona);
+                }
+            }, 300);
+            
+            // Eliminar de la base de datos (hacer await para asegurar que se elimine)
+            try {
+                if (asistencia.id) {
+                    console.log('Eliminando asistencia ID:', asistencia.id);
+                    const resultado = await supabase
+                        .from('asistencias')
+                        .delete()
+                        .eq('id', asistencia.id);
+                    
+                    if (resultado.error) {
+                        console.error('Error al eliminar asistencia:', resultado.error);
+                        // mostrarAlerta('Error al eliminar asistencia: ' + resultado.error.message, 'error');
+                    } else {
+                        console.log('Asistencia eliminada exitosamente de la BD');
+                    }
+                } else {
+                    console.log('No hay ID de asistencia para eliminar');
+                }
+            } catch (error) {
+                console.error('Error al eliminar:', error);
+                // mostrarAlerta('Error al eliminar asistencia', 'error');
+            }
+        }
+
+        async function guardarAsistenciaBackground(personalId, presente, horaActual) {
+            try {
+                const asistenciaExistente = asistencias[personalId];
+                
+                if (asistenciaExistente?.id) {
+                    await supabase
+                        .from('asistencias')
+                        .update({
+                            presente: presente,
+                            hora_entrada: horaActual
+                        })
+                        .eq('id', asistenciaExistente.id);
+                } else {
+                    const resultado = await supabase
+                        .from('asistencias')
+                        .upsert({
+                            personal_id: personalId,
+                            fecha: fechaHoy,
+                            presente: presente,
+                            hora_entrada: horaActual
+                        }, {
+                            onConflict: 'personal_id,fecha'
+                        })
+                        .select();
+                    
+                    if (resultado.data && resultado.data[0]) {
+                        asistencias[personalId].id = resultado.data[0].id;
+                    }
+                }
+            } catch (error) {
+                console.error('Error al guardar:', error);
+            }
+        }
+
+        function actualizarContadoresRapido() {
+            const totalPersonal = personal.length;
+            const presentes = Object.values(asistencias).filter(a => a.presente === true).length;
+            const pendientes = totalPersonal - presentes;
+            const porcentaje = totalPersonal > 0 ? Math.round((presentes / totalPersonal) * 100) : 0;
+            
+            document.getElementById('countPendientes').textContent = pendientes;
+            document.getElementById('countPresentes').textContent = presentes;
+            document.getElementById('totalPersonal').textContent = totalPersonal;
+            document.getElementById('totalPresentes').textContent = presentes;
+            document.getElementById('porcentajeAsistencia').textContent = porcentaje + '%';
+        }
+
+        function agregarAPresentes(persona, horaActual) {
+            const container = document.getElementById('personalPresenteContainer');
+            
+            // Crear nuevo elemento
+            const nuevoElemento = document.createElement('div');
+            nuevoElemento.className = 'persona-card';
+            nuevoElemento.style.transform = 'translateX(100%)';
+            nuevoElemento.style.opacity = '0';
+            nuevoElemento.innerHTML = `
+                <div class="persona-info">
+                    <div class="persona-nombre">
+                        ${persona.RANGO} ${persona.APELLIDOS}, ${persona.NOMBRES}
+                    </div>
+                    <div class="persona-detalles">
+                        ${persona['INST.'] || 'Sin institución'} • Cédula: ${persona.CÉDULA}
+                    </div>
+                    <div class="persona-hora">
+                        ✅ Entrada: ${horaActual}
+                    </div>
+                </div>
+                <button 
+                    class="btn-undo"
+                    onclick="desmarcarPresente(${persona.id})"
+                    title="Quitar de presentes"
+                >
+                    Deshacer
+                </button>
+            `;
+            
+            // Encontrar posición correcta para insertar ordenadamente
+            const elementosExistentes = Array.from(container.children);
+            let posicionInsercion = 0;
+            
+            for (let i = 0; i < elementosExistentes.length; i++) {
+                const elemento = elementosExistentes[i];
+                const personaIdExistente = elemento.querySelector('.btn-undo').onclick.toString().match(/\d+/)[0];
+                const personaExistente = personal.find(p => p.id == personaIdExistente);
+                
+                if (personaExistente && compararPersonal(persona, personaExistente) < 0) {
+                    break;
+                }
+                posicionInsercion = i + 1;
+            }
+            
+            // Insertar en la posición correcta
+            if (posicionInsercion >= elementosExistentes.length) {
+                container.appendChild(nuevoElemento);
+            } else {
+                container.insertBefore(nuevoElemento, elementosExistentes[posicionInsercion]);
+            }
+            
+            // Animar entrada
+            setTimeout(() => {
+                nuevoElemento.style.transform = 'translateX(0)';
+                nuevoElemento.style.opacity = '1';
+            }, 50);
+        }
+
+        function agregarAPendientes(persona) {
+            const container = document.getElementById('personalPendienteContainer');
+            
+            // Verificar si ya no hay elementos (mensaje de "todos han pasado lista")
+            if (container.innerHTML.includes('¡Todos han pasado lista!')) {
+                container.innerHTML = '';
+            }
+            
+            // Crear nuevo elemento
+            const nuevoElemento = document.createElement('div');
+            nuevoElemento.className = 'persona-card';
+            nuevoElemento.style.transform = 'translateX(-100%)';
+            nuevoElemento.style.opacity = '0';
+            nuevoElemento.innerHTML = `
+                <div class="persona-info">
+                    <div class="persona-nombre">
+                        ${persona.RANGO} ${persona.APELLIDOS}, ${persona.NOMBRES}
+                    </div>
+                    <div class="persona-detalles">
+                        ${persona['INST.'] || 'Sin institución'} • Cédula: ${persona.CÉDULA}
+                    </div>
+                </div>
+                <button 
+                    class="btn-check"
+                    onclick="marcarPresente(${persona.id})"
+                >
+                    ✓ Presente
+                </button>
+            `;
+            
+            // Encontrar posición correcta para insertar ordenadamente
+            const elementosExistentes = Array.from(container.children);
+            let posicionInsercion = 0;
+            
+            for (let i = 0; i < elementosExistentes.length; i++) {
+                const elemento = elementosExistentes[i];
+                const personaIdExistente = elemento.querySelector('.btn-check').onclick.toString().match(/\d+/)[0];
+                const personaExistente = personal.find(p => p.id == personaIdExistente);
+                
+                if (personaExistente && compararPersonal(persona, personaExistente) < 0) {
+                    break;
+                }
+                posicionInsercion = i + 1;
+            }
+            
+            // Insertar en la posición correcta
+            if (posicionInsercion >= elementosExistentes.length) {
+                container.appendChild(nuevoElemento);
+            } else {
+                container.insertBefore(nuevoElemento, elementosExistentes[posicionInsercion]);
+            }
+            
+            // Animar entrada
+            setTimeout(() => {
+                nuevoElemento.style.transform = 'translateX(0)';
+                nuevoElemento.style.opacity = '1';
+            }, 50);
+        }
+
+        function actualizarEstadisticas() {
+            const totalPersonal = personal.length;
+            const presentes = Object.values(asistencias).filter(a => a.presente === true).length;
+            const porcentaje = totalPersonal > 0 ? Math.round((presentes / totalPersonal) * 100) : 0;
+            
+            document.getElementById('totalPersonal').textContent = totalPersonal;
+            document.getElementById('totalPresentes').textContent = presentes;
+            document.getElementById('porcentajeAsistencia').textContent = porcentaje + '%';
+        }
+
+        function mostrarAlerta(mensaje, tipo = 'success') {
+            const alert = document.getElementById('alert');
+            alert.textContent = mensaje;
+            alert.className = `alert ${tipo}`;
+            alert.style.display = 'block';
+            
+            if (tipo !== 'info') {
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
