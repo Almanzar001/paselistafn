@@ -16,12 +16,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tu-usuario/AsistenciaApp.git"
+    "url": "https://github.com/Almanzar001/paselistafn.git"
   },
   "bugs": {
-    "url": "https://github.com/tu-usuario/AsistenciaApp/issues"
+    "url": "https://github.com/Almanzar001/paselistafn/issues"
   },
-  "homepage": "https://github.com/tu-usuario/AsistenciaApp#readme",
+  "homepage": "https://github.com/Almanzar001/paselistafn#readme",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

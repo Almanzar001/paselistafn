@@ -161,7 +161,7 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 Para soporte técnico o consultas:
 - 📧 Email: [tu-email@ejemplo.com]
-- 🐛 Issues: [GitHub Issues](https://github.com/tu-usuario/AsistenciaApp/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/Almanzar001/paselistafn/issues)
 
 ---
 
