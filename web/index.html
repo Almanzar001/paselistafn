@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asistencia Personal</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Librerías para exportar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -73,7 +77,7 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            margin-top: 310px;
+            margin-top: 360px;
         }
 
         .loading {
@@ -185,6 +189,41 @@
             color: white;
         }
 
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 238px;
+            left: 0;
+            right: 0;
+            z-index: 996;
+            justify-content: center;
+        }
+
+        .btn-export {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-export:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
         .tab-content {
             display: none;
         }
@@ -202,7 +241,7 @@
             border-radius: 0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             position: fixed;
-            top: 238px;
+            top: 288px;
             left: 0;
             right: 0;
             z-index: 997;
@@ -233,7 +272,7 @@
             text-align: center;
             display: none;
             position: fixed;
-            top: 298px;
+            top: 348px;
             left: 20px;
             right: 20px;
             z-index: 1001;
@@ -266,7 +305,7 @@
             }
 
             .content {
-                margin-top: 350px;
+                margin-top: 400px;
                 padding: 10px;
             }
 
@@ -280,13 +319,18 @@
                 top: 168px;
             }
 
-            .stats {
+            .export-buttons {
                 top: 228px;
+                padding: 8px;
+            }
+
+            .stats {
+                top: 278px;
                 padding: 10px;
             }
 
             .alert {
-                top: 288px;
+                top: 338px;
                 left: 10px;
                 right: 10px;
                 max-width: none;
@@ -316,6 +360,11 @@
         <button class="tab" onclick="cambiarTab('presentes')">
             Presentes (<span id="countPresentes">0</span>)
         </button>
+    </div>
+
+    <div class="export-buttons">
+        <button class="btn-export" onclick="exportarPDF()">📄 Exportar PDF</button>
+        <button class="btn-export" onclick="exportarExcel()">📊 Exportar Excel</button>
     </div>
 
     <div class="content">
@@ -909,6 +958,173 @@
                     alert.style.display = 'none';
                 }, 3000);
             }
+        }
+
+        function obtenerDatosActuales() {
+            const busqueda = document.getElementById('searchInput').value.toLowerCase();
+            
+            // Filtrar personal
+            const personalFiltrado = personal.filter(persona =>
+                persona.APELLIDOS?.toLowerCase().includes(busqueda) ||
+                persona.NOMBRES?.toLowerCase().includes(busqueda) ||
+                persona.RANGO?.toLowerCase().includes(busqueda) ||
+                persona.CÉDULA?.includes(busqueda)
+            );
+            
+            // Separar en pendientes y presentes
+            const pendientes = personalFiltrado
+                .filter(persona => !asistencias[persona.id]?.presente)
+                .sort(compararPersonal);
+                
+            const presentes = personalFiltrado
+                .filter(persona => asistencias[persona.id]?.presente)
+                .sort(compararPersonal);
+            
+            return { pendientes, presentes };
+        }
+
+        function exportarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const { pendientes, presentes } = obtenerDatosActuales();
+            
+            // Configuración
+            const fechaActual = new Date().toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // Título
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text('Lista de Asistencia Personal', 105, 20, { align: 'center' });
+            
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(fechaActual, 105, 30, { align: 'center' });
+            
+            let yPos = 50;
+            
+            // Estadísticas
+            const totalPersonal = personal.length;
+            const totalPresentes = presentes.length;
+            const totalPendientes = pendientes.length;
+            const porcentaje = totalPersonal > 0 ? Math.round((totalPresentes / totalPersonal) * 100) : 0;
+            
+            doc.setFontSize(10);
+            doc.text(`Total Personal: ${totalPersonal} | Presentes: ${totalPresentes} | Pendientes: ${totalPendientes} | Asistencia: ${porcentaje}%`, 20, yPos);
+            yPos += 20;
+            
+            if (tabActual === 'pendientes' && pendientes.length > 0) {
+                // Exportar pendientes
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Personal Pendiente por Pasar Lista', 20, yPos);
+                yPos += 10;
+                
+                const datosPendientes = pendientes.map(persona => [
+                    persona.RANGO,
+                    `${persona.APELLIDOS}, ${persona.NOMBRES}`,
+                    persona['INST.'] || 'Sin institución',
+                    persona.CÉDULA
+                ]);
+                
+                doc.autoTable({
+                    head: [['Rango', 'Nombre', 'Institución', 'Cédula']],
+                    body: datosPendientes,
+                    startY: yPos,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [33, 150, 243] }
+                });
+                
+            } else if (tabActual === 'presentes' && presentes.length > 0) {
+                // Exportar presentes
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Personal Presente', 20, yPos);
+                yPos += 10;
+                
+                const datosPresentes = presentes.map(persona => {
+                    const asistencia = asistencias[persona.id];
+                    return [
+                        persona.RANGO,
+                        `${persona.APELLIDOS}, ${persona.NOMBRES}`,
+                        persona['INST.'] || 'Sin institución',
+                        persona.CÉDULA,
+                        asistencia.hora_entrada
+                    ];
+                });
+                
+                doc.autoTable({
+                    head: [['Rango', 'Nombre', 'Institución', 'Cédula', 'Hora Entrada']],
+                    body: datosPresentes,
+                    startY: yPos,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [76, 175, 80] }
+                });
+            } else {
+                doc.text('No hay datos para exportar en la pestaña actual', 20, yPos);
+            }
+            
+            // Guardar PDF
+            const nombreArchivo = `asistencia_${tabActual}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(nombreArchivo);
+            
+            mostrarAlerta(`PDF exportado: ${nombreArchivo}`, 'success');
+        }
+
+        function exportarExcel() {
+            const { pendientes, presentes } = obtenerDatosActuales();
+            const fechaActual = new Date().toISOString().split('T')[0];
+            
+            // Crear libro de trabajo
+            const wb = XLSX.utils.book_new();
+            
+            if (tabActual === 'pendientes' && pendientes.length > 0) {
+                // Hoja de pendientes
+                const datosPendientes = pendientes.map(persona => ({
+                    'Rango': persona.RANGO,
+                    'Apellidos': persona.APELLIDOS,
+                    'Nombres': persona.NOMBRES,
+                    'Institución': persona['INST.'] || 'Sin institución',
+                    'Cédula': persona.CÉDULA
+                }));
+                
+                const ws = XLSX.utils.json_to_sheet(datosPendientes);
+                XLSX.utils.book_append_sheet(wb, ws, 'Pendientes');
+                
+            } else if (tabActual === 'presentes' && presentes.length > 0) {
+                // Hoja de presentes
+                const datosPresentes = presentes.map(persona => {
+                    const asistencia = asistencias[persona.id];
+                    return {
+                        'Rango': persona.RANGO,
+                        'Apellidos': persona.APELLIDOS,
+                        'Nombres': persona.NOMBRES,
+                        'Institución': persona['INST.'] || 'Sin institución',
+                        'Cédula': persona.CÉDULA,
+                        'Hora Entrada': asistencia.hora_entrada,
+                        'Fecha': asistencia.fecha
+                    };
+                });
+                
+                const ws = XLSX.utils.json_to_sheet(datosPresentes);
+                XLSX.utils.book_append_sheet(wb, ws, 'Presentes');
+            } else {
+                // Crear hoja vacía con mensaje
+                const ws = XLSX.utils.json_to_sheet([{
+                    'Mensaje': 'No hay datos para exportar en la pestaña actual'
+                }]);
+                XLSX.utils.book_append_sheet(wb, ws, 'Sin Datos');
+            }
+            
+            // Guardar archivo
+            const nombreArchivo = `asistencia_${tabActual}_${fechaActual}.xlsx`;
+            XLSX.writeFile(wb, nombreArchivo);
+            
+            mostrarAlerta(`Excel exportado: ${nombreArchivo}`, 'success');
         }
     </script>
 </body>
